@@ -1,5 +1,5 @@
 [package]
-name = "SaiDownloader"
+name = "saidl"
 version = "0.0.1"
 edition = "2021"
 
@@ -7,3 +7,4 @@ edition = "2021"
 members = [ "modules/*" ]
 
 [dependencies]
+hls = { path = "modules/hls" }

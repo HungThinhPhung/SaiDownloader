@@ -1,8 +1,8 @@
 mod command;
 
-use std::{env, path};
 use crate::command::{Cli, Commands, HLSCommand};
 use clap::Parser;
+use saidl_hls::download;
 
 pub fn run() {
     let cli: Cli = Cli::parse();
@@ -27,12 +27,24 @@ pub fn handle_hls(hls: HLSCommand) {
             println!("Input file is required");
         }
         Some(path) => {
+            // Extract links from input
             let contents = std::fs::read_to_string(path).unwrap();
-            let content_lines = contents.split("\n");
-            let vec: Vec<&str> = content_lines.collect();
-            println!("With text:\n{contents}");
+            let mut content_lines = contents.split("\n");
+            let links = link_filter(&mut content_lines);
+
+            download(links, hls.png, &None, hls.output);
         }
     }
+}
+
+fn link_filter<'a>(links: impl Iterator<Item = &'a str>) -> Vec<String> {
+    let mut result = Vec::new();
+    for link in links {
+        if link.starts_with("http") {
+            result.push(link.to_string());
+        }
+    }
+    return result;
 }
 
 

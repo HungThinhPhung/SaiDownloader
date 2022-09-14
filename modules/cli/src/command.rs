@@ -28,4 +28,8 @@ pub struct HLSCommand {
     /// Enable png mode
     #[clap(short, long, value_parser, default_value_t = false)]
     pub png: bool,
+
+    /// Output file name
+    #[clap(short, long, value_parser)]
+    pub output: Option<String>,
 }

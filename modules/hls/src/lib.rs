@@ -25,11 +25,12 @@ pub fn strip_png(data: Bytes) -> Bytes {
     data.slice(8..)
 }
 
-pub fn download(input: Vec<&str>, png: bool, headers: &Option<HeaderMap>) {
+pub fn download(input: Vec<String>, png: bool, headers: &Option<HeaderMap>, output: Option<String>) {
     let list_file = "list.txt";
     let dir = create_output_folder();
     let mut downloaded_file = String::new();
 
+    // Download all file
     for (index, url) in input.iter().enumerate() {
         let mut data = send_request(url, headers);
         if png {
@@ -48,7 +49,15 @@ pub fn download(input: Vec<&str>, png: bool, headers: &Option<HeaderMap>) {
     write_data_file(list_file_data, dir.as_ref(), list_file);
 
     // Create output video file name
-    let mut output_video_name = dir[10..dir.len() - 1].to_string();
+    let mut output_video_name: String;
+    match output {
+        None => {
+            output_video_name = dir[10..dir.len() - 1].to_string();
+        }
+        Some(name) => {
+            output_video_name = name;
+        }
+    }
     output_video_name.push_str(".mp4");
 
     // Create command string

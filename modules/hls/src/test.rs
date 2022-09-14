@@ -5,7 +5,7 @@ mod tests {
     #[test]
     fn send_request_work() {
         let url = "https://google.com";
-        let x = send_request(url);
+        let x = send_request(url, None);
         assert_ne!(x.len(), 0);
     }
 }

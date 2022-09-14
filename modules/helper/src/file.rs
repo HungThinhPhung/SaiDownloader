@@ -3,7 +3,6 @@ use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
-use bytes::Bytes;
 use crate::get_format_msg;
 
 pub fn write_data_file(data: &[u8], directory_name: &str, file_name: &str) {

@@ -4,9 +4,19 @@ mod test;
 use bytes::Bytes;
 use saidl_helper::file::{create_output_folder, remove_download_folder, write_data_file};
 use saidl_helper::{get_format_msg, run_os_command};
+use reqwest::{blocking::Client, header::HeaderMap};
 
-pub fn send_request(url: &str) -> Bytes {
-    let response = reqwest::blocking::get(url).expect(&get_format_msg("Send request failed", url));
+pub fn send_request(url: &str, headers: &Option<HeaderMap>) -> Bytes {
+    let client = Client::new();
+    let mut req_builder = client.get(url);
+    match headers {
+        None => {}
+        Some(headers) => {
+            req_builder = req_builder.headers(headers.clone());
+        }
+    }
+    let response = req_builder.send().unwrap();
+    // let response = reqwest::blocking::get(url).expect(&get_format_msg("Send request failed", url));
     let data = response.bytes().expect(&get_format_msg("Unpack data failed: {}", url));
     return data;
 }
@@ -15,13 +25,13 @@ pub fn strip_png(data: Bytes) -> Bytes {
     data.slice(8..)
 }
 
-pub fn download(input: Vec<&str>, png: bool) {
+pub fn download(input: Vec<&str>, png: bool, headers: &Option<HeaderMap>) {
     let list_file = "list.txt";
     let dir = create_output_folder();
     let mut downloaded_file = String::new();
 
     for (index, url) in input.iter().enumerate() {
-        let mut data = send_request(url);
+        let mut data = send_request(url, headers);
         if png {
             data = strip_png(data);
         }

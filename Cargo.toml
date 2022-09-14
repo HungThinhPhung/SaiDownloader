@@ -9,5 +9,6 @@ members = [ "modules/*" ]
 [dependencies]
 
 # Local dependencies
-saidl-helper = { path = "modules/saidl-helper" }
-hls = { path = "modules/hls" }
+saidl-helper = { path = "modules/helper" }
+saidl-hls = { path = "modules/hls" }
+saidl-cli = { path = "modules/cli" }

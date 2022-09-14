@@ -1,5 +1,5 @@
 [package]
-name = "hls"
+name = "saidl-hls"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,4 +10,4 @@ bytes = { version = "1.2.1" }
 #ffmpeg-next = { version = "5.1.1" }
 
 # Local dependencies
-saidl-helper = { path = "../saidl-helper" }
+saidl-helper = { path = "../helper" }

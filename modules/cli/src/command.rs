@@ -29,7 +29,7 @@ pub struct HLSCommand {
     #[clap(short, long, value_parser, default_value_t = false)]
     pub png: bool,
 
-    /// keep temp folder after download
+    /// Keep temp folder after download
     #[clap(short, long, value_parser, default_value_t = false)]
     pub keep: bool,
 

@@ -3,7 +3,6 @@ extern crate core;
 #[cfg(test)]
 mod test;
 
-use std::io;
 use bytes::Bytes;
 use saidl_helper::file::{create_output_folder, remove_download_folder, write_data_file};
 use saidl_helper::{get_format_msg, run_os_command};
@@ -18,6 +17,7 @@ pub fn send_request(url: &str, headers: &Option<HeaderMap>) -> Result<Bytes, Str
             req_builder = req_builder.headers(headers.clone());
         }
     }
+    println!("Downloading {}", url);
     let response = req_builder.send().unwrap();
     let status_code = response.status().as_u16();
     if status_code >= 400 {
@@ -32,7 +32,7 @@ pub fn strip_png(data: Bytes) -> Bytes {
     data.slice(8..)
 }
 
-pub fn download(input: Vec<String>, png: bool, keep: bool, headers: &Option<HeaderMap>, output: Option<String>) {
+pub fn download(input: &Vec<String>, png: bool, keep: bool, headers: &Option<HeaderMap>, output: Option<String>) {
     let list_file = "list.txt";
     let dir = create_output_folder();
     let mut downloaded_file = String::new();

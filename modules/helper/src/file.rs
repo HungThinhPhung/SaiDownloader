@@ -1,7 +1,7 @@
 use std::fs;
 use std::fs::File;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 use crate::get_format_msg;
 
@@ -32,4 +32,10 @@ pub fn create_output_folder() -> String {
 
 pub fn remove_download_folder(dir: &str) {
     fs::remove_dir_all(dir).expect(&get_format_msg("Cannot remove folder", dir));
+}
+
+pub fn text_to_lines(path: PathBuf) -> Vec<String> {
+    let contents = fs::read_to_string(path).unwrap();
+    let iter_lines = contents.split("\n");
+    iter_lines.map(|x| x.to_string()).collect()
 }

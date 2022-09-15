@@ -1,6 +1,7 @@
 extern crate core;
 
 pub mod file;
+pub mod http;
 
 use std::fmt::Display;
 use std::process::Command;

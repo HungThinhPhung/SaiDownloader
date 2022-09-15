@@ -14,12 +14,12 @@ pub fn lines_to_header(lines: &Vec<String>) -> HeaderMap {
 
         // Skip no colon line
         if !(split.len() == 2) { continue };
+
         let owned_name = split[0].to_owned();
         let owned_value = split[1].to_owned();
         let header_name = HeaderName::from_str(owned_name.as_ref()).unwrap();
         let header_value = HeaderValue::from_str(owned_value.as_ref()).unwrap();
         headers.append(header_name, header_value);
     }
-    headers.append("aasdsa", "Asdsdas".parse().unwrap());
     return headers;
 }

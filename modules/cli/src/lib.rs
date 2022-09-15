@@ -32,7 +32,7 @@ pub fn handle_hls(hls: HLSCommand) {
             let mut content_lines = contents.split("\n");
             let links = link_filter(&mut content_lines);
 
-            download(links, hls.png, &None, hls.output);
+            download(links, hls.png, hls.keep, &None, hls.output);
         }
     }
 }

@@ -1,12 +1,15 @@
+extern crate core;
+
 #[cfg(test)]
 mod test;
 
+use std::io;
 use bytes::Bytes;
 use saidl_helper::file::{create_output_folder, remove_download_folder, write_data_file};
 use saidl_helper::{get_format_msg, run_os_command};
 use reqwest::{blocking::Client, header::HeaderMap};
 
-pub fn send_request(url: &str, headers: &Option<HeaderMap>) -> Bytes {
+pub fn send_request(url: &str, headers: &Option<HeaderMap>) -> Result<Bytes, String> {
     let client = Client::new();
     let mut req_builder = client.get(url);
     match headers {
@@ -16,23 +19,35 @@ pub fn send_request(url: &str, headers: &Option<HeaderMap>) -> Bytes {
         }
     }
     let response = req_builder.send().unwrap();
+    let status_code = response.status().as_u16();
+    if status_code >= 400 {
+        return Err(format!("{} status code for {}", status_code, url));
+    }
     // let response = reqwest::blocking::get(url).expect(&get_format_msg("Send request failed", url));
     let data = response.bytes().expect(&get_format_msg("Unpack data failed: {}", url));
-    return data;
+    return Ok(data);
 }
 
 pub fn strip_png(data: Bytes) -> Bytes {
     data.slice(8..)
 }
 
-pub fn download(input: Vec<String>, png: bool, headers: &Option<HeaderMap>, output: Option<String>) {
+pub fn download(input: Vec<String>, png: bool, keep: bool, headers: &Option<HeaderMap>, output: Option<String>) {
     let list_file = "list.txt";
     let dir = create_output_folder();
     let mut downloaded_file = String::new();
 
     // Download all file
     for (index, url) in input.iter().enumerate() {
-        let mut data = send_request(url, headers);
+        let http_result = send_request(url, headers);
+        let mut data: Bytes;
+        match http_result {
+            Err(e) => {
+                println!("{e}");
+                return;
+            }
+            Ok(b) => data = b
+        };
         if png {
             data = strip_png(data);
         }
@@ -69,5 +84,7 @@ pub fn download(input: Vec<String>, png: bool, headers: &Option<HeaderMap>, outp
 
     // Run command and delete temp folder
     run_os_command(&ffmpeg_cmd);
-    remove_download_folder(&dir);
+    if !keep {
+        remove_download_folder(&dir);
+    }
 }

@@ -29,6 +29,10 @@ pub struct HLSCommand {
     #[clap(short, long, value_parser, default_value_t = false)]
     pub png: bool,
 
+    /// keep temp folder after download
+    #[clap(short, long, value_parser, default_value_t = false)]
+    pub keep: bool,
+
     /// Output file name
     #[clap(short, long, value_parser)]
     pub output: Option<String>,

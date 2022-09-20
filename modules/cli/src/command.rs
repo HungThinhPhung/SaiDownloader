@@ -11,7 +11,18 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Commands {
     /// HLS Downloader
-    HLS(HLSCommand)
+    HLS(HLSCommand),
+
+    /// Ebook downloader
+    EB(EBCommand),
+}
+
+#[derive(Parser)]
+#[clap(arg_required_else_help(true))]
+pub struct EBCommand {
+    /// Load input config file
+    #[clap(short, long, value_parser, value_name = "FILE")]
+    pub input: Option<PathBuf>,
 }
 
 #[derive(Parser)]

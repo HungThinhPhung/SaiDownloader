@@ -7,7 +7,9 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "3.2.21", features = ["derive"] }
+toml = { version = "0.5.9" }
 
 # Local dependencies
 saidl-hls = { path = "../hls" }
 saidl-helper = { path = "../helper" }
+saidl-ebook = { path = "../ebook" }

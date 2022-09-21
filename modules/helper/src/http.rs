@@ -14,13 +14,9 @@ pub fn lines_to_header(lines: &Vec<String>) -> HeaderMap {
 
         // Skip no colon line
         if !(split.len() == 2) { continue };
-        let mut temp_value = split[1];
-        if temp_value.ends_with("\r") {
-            temp_value = &temp_value[..temp_value.len()-1];
-        }
 
         let header_name = HeaderName::from_str(split[0]).unwrap();
-        let header_value = HeaderValue::from_str(temp_value).unwrap();
+        let header_value = HeaderValue::from_str(split[1]).unwrap();
         headers.append(header_name, header_value);
     }
     return headers;

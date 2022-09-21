@@ -5,6 +5,11 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 use crate::get_format_msg;
 
+#[cfg(windows)]
+const LINE_ENDING: &'static str = "\r\n";
+#[cfg(not(windows))]
+const LINE_ENDING: &'static str = "\n";
+
 pub fn write_data_file(data: &[u8], directory_name: &str, file_name: &str) {
     let mut full_file_path = String::new();
     full_file_path.push_str(directory_name);
@@ -36,7 +41,7 @@ pub fn remove_download_folder(dir: &str) {
 
 pub fn text_to_lines(path: PathBuf) -> Vec<String> {
     let contents = fs::read_to_string(path).unwrap();
-    let iter_lines = contents.split("\n");
+    let iter_lines = contents.split(LINE_ENDING);
     iter_lines.map(|x| x.to_string()).collect()
 }
 

@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 serde = { version = "1.0.144", features = ["derive"] }
 toml = { version = "0.5.9" }
+epub-builder = "0.5.0"

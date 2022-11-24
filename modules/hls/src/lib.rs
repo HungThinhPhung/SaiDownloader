@@ -3,6 +3,7 @@ extern crate core;
 #[cfg(test)]
 mod test;
 
+use std::time::Duration;
 use bytes::Bytes;
 use saidl_helper::file::{create_output_folder, remove_download_folder, write_data_file};
 use saidl_helper::{get_format_msg, run_os_command};
@@ -11,6 +12,7 @@ use reqwest::{blocking::Client, header::HeaderMap};
 pub fn send_request(url: &str, headers: &Option<HeaderMap>) -> Result<Bytes, String> {
     let client = Client::new();
     let mut req_builder = client.get(url);
+    req_builder = req_builder.timeout(Duration::new(1000, 0));
     match headers {
         None => {}
         Some(headers) => {

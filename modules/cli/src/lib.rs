@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use crate::command::{Cli, Commands, EBCommand, HLSCommand};
 use clap::Parser;
 use saidl_hls::download;
-use saidl_ebook::{Config, IterationConfig, TocConfig, EbookFlow};
+use saidl_ebook::{Config, IterationConfig, TocConfig, EbookFlow, TocFlow, StandardFlow};
 use saidl_helper::{file::text_to_lines, http::{lines_to_header, HeaderMap}};
 
 pub fn run() {
@@ -52,7 +52,7 @@ pub fn handle_eb(eb: EBCommand) {
                     let z = 1;
                 }
                 EbookFlow::Toc(t) => {
-                    let t = 2;
+                    <TocFlow as StandardFlow<TocConfig, String>>::execute(t);
                 }
             }
             let x = 1;

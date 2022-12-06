@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use crate::command::{Cli, Commands, EBCommand, HLSCommand};
 use clap::Parser;
 use saidl_hls::download;
-use saidl_ebook::{Config, IterationConfig, TocConfig, EbookFlow, TocDownloader, StandardEpub, WriteBook};
+use saidl_ebook::{Config, IterationConfig, TocConfig, EbookFlow, TocDownloader, StandardEpub, WriteBook, NumDownloader, IterDownloader};
 use saidl_helper::{file::get_lines, http::{lines_to_header, HeaderMap}};
 
 pub fn run() {
@@ -46,14 +46,21 @@ pub fn handle_eb(eb: EBCommand) {
             let config: Config = toml::from_str(&contents).unwrap();
             let y = config.flow;
             match y {
-                EbookFlow::Iter(e) => {
-                    let t = 1;
-                    let y = e.iter;
-                    let z = 1;
+                EbookFlow::Iter(f) => {
+                    let downloader = IterDownloader::build(f);
+                    let content = downloader.download(config.title_selector, config.content_selector);
+                    let writer = StandardEpub::build(config.name, content);
+                    writer.write().unwrap();
                 }
-                EbookFlow::Toc(t) => {
-                    let downloader = TocDownloader::build(t, config.title_selector, config.content_selector);
-                    let content = downloader.download();
+                EbookFlow::Toc(f) => {
+                    let downloader = TocDownloader::build(f);
+                    let content = downloader.download(config.title_selector, config.content_selector);
+                    let writer = StandardEpub::build(config.name, content);
+                    writer.write().unwrap();
+                }
+                EbookFlow::Num(f) => {
+                    let downloader = NumDownloader::build(f);
+                    let content = downloader.download(config.title_selector, config.content_selector);
                     let writer = StandardEpub::build(config.name, content);
                     writer.write().unwrap();
                 }

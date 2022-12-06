@@ -20,7 +20,12 @@ pub struct Config {
 
 #[derive(Deserialize)]
 pub struct IterationConfig {
-    pub iter: String,
+    pub base_url: String,
+    pub next_selector: String,
+    pub stop_url: String,
+
+    // In case of relative href
+    pub relative_base: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -28,6 +33,13 @@ pub struct TocConfig {
     base_url: String,
     toc_selector: String,
     void_sub: String,
+}
+
+#[derive(Deserialize)]
+pub struct NumConfig {
+    pattern: String,
+    start: u16,
+    end: u16,
 }
 
 #[derive(Deserialize)]
@@ -40,6 +52,9 @@ pub enum EbookFlow {
 
     // Extract all url from a html element, which contains table of content
     Toc(TocConfig),
+
+    // Have an url pattern and a number replacer
+    Num(NumConfig)
 }
 
 pub struct Chapter<T: Display> {
@@ -79,7 +94,7 @@ impl WriteBook<String, StandardContent> for StandardEpub {
             let content = content_to_xhtml(&chapter.title,&chapter.content);
             ebook_builder
                 .add_content(EpubContent::new(format!("{}.xhtml", id), content.as_bytes())
-                    .title(&chapter.title.to_string())
+                    .title(&chapter.title)
                     .reftype(ReferenceType::TitlePage)).unwrap();
         }
         ebook_builder.inline_toc().generate(&mut file).unwrap();
@@ -87,10 +102,16 @@ impl WriteBook<String, StandardContent> for StandardEpub {
     }
 }
 
+pub struct IterDownloader {
+    config: IterationConfig
+}
+
+pub struct NumDownloader {
+    config: NumConfig,
+}
+
 pub struct TocDownloader {
-    config: TocConfig,
-    title_selector: String,
-    content_selector: String,
+    config: TocConfig
 }
 
 pub struct SinglePageContent {
@@ -100,8 +121,8 @@ pub struct SinglePageContent {
 }
 
 impl SinglePageContent {
-    pub fn to_chapter(self) -> Chapter<String> {
-        Chapter { title: self.title, content: self.content }
+    pub fn to_chapter(&self) -> Chapter<String> {
+        Chapter { title: self.title.clone(), content: self.content.clone() }
     }
 }
 
@@ -115,7 +136,16 @@ pub fn single_page_download(url: &str, title_selector: &str, content_selector: &
     let content_raw_data = document.select(&content_selector).next().unwrap();
     let next_url: Option<String> = match next_url_selector {
         // TODO: Handle this case (only for iteration flow)
-        Some(url) => { Some("".to_string()) },
+        Some(selection) => {
+            let next_selector = Selector::parse(selection).unwrap();
+            let raw_selector = document.select(&next_selector).next().unwrap();
+            let url = raw_selector.value().attr("href");
+            let return_url = match url {
+                Some(u) => Some(u.to_string()),
+                None => None,
+            };
+            return_url
+        },
         None => None
     };
     let (mut title, mut content) = (String::new(), String::new());
@@ -128,20 +158,59 @@ pub fn single_page_download(url: &str, title_selector: &str, content_selector: &
     return SinglePageContent { next_url, title, content}
 }
 
-impl TocDownloader {
-    pub fn build(config: TocConfig, title_selector: String, content_selector: String) -> Self {
+impl IterDownloader {
+    pub fn build(config: IterationConfig) -> Self {
         Self {
-            config,
-            title_selector,
-            content_selector
+            config
         }
     }
 
-    pub fn download(self) -> StandardContent {
+    pub fn download(self, title_selector: String, content_selector: String) -> StandardContent {
+        let mut result = Vec::new();
+        let mut url = self.config.base_url;
+        let next_selector: Option<&str> = Some(&self.config.next_selector);
+        loop {
+            let page_content = single_page_download(&url, &title_selector, &content_selector, next_selector);
+            result.push(page_content.to_chapter());
+            if url == self.config.stop_url {
+                break
+            }
+            url = page_content.next_url.unwrap();
+        }
+        result
+    }
+}
+
+impl NumDownloader {
+    pub fn build(config: NumConfig) -> Self {
+        Self {
+            config
+        }
+    }
+
+    pub fn download(self, title_selector: String, content_selector: String) -> StandardContent {
+        let mut result = Vec::new();
+        for number in self.config.start..=self.config.end {
+            let url = self.config.pattern.replace("$", &number.to_string());
+            let page_content = single_page_download(&url, &title_selector, &content_selector, None);
+            result.push(page_content.to_chapter());
+        }
+        result
+    }
+}
+
+impl TocDownloader {
+    pub fn build(config: TocConfig) -> Self {
+        Self {
+            config
+        }
+    }
+
+    pub fn download(self, title_selector: String, content_selector: String) -> StandardContent {
         let mut result = Vec::new();
         let links = self.extract_links().unwrap();
         for link in links {
-            let page_content = single_page_download(&link, &self.title_selector, &self.content_selector, None);
+            let page_content = single_page_download(&link, &title_selector, &content_selector, None);
             result.push(page_content.to_chapter());
         }
         result

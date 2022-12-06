@@ -1,7 +1,29 @@
-pub use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
-use std::str::FromStr;
+pub use reqwest::{header::{HeaderMap, HeaderName, HeaderValue},
+                  blocking::{Client, Response}};
+use std::{fmt, str::FromStr, time::Duration};
+use serde::ser::Error;
 
-pub fn lines_to_header(lines: &Vec<String>) -> HeaderMap {
+pub fn send_request(url: &str, headers: &Option<HeaderMap>) -> Result<Response, fmt::Error> {
+    let client = Client::new();
+    let mut req_builder = client.get(url);
+    req_builder = req_builder.timeout(Duration::new(1000, 0));
+    match headers {
+        None => {}
+        Some(headers) => {
+            req_builder = req_builder.headers(headers.clone());
+        }
+    }
+    println!("Downloading {}", url);
+    let response = req_builder.send().unwrap();
+    let status_code = response.status().as_u16();
+    if status_code >= 400 {
+        let err = fmt::Error::custom::<String>(format!("{} status code for {}", status_code, url).into());
+        return Err(err);
+    }
+    Ok(response)
+}
+
+pub fn lines_to_header(lines: impl Iterator<Item=String>) -> HeaderMap {
     let mut headers = HeaderMap::new();
     for line in lines {
         // TODO: Handle pseudo-header http2 (tokio async)
@@ -10,14 +32,19 @@ pub fn lines_to_header(lines: &Vec<String>) -> HeaderMap {
             continue
         }
         // Split string by first colon
-        let split: Vec<&str> = line.splitn(2, ":").collect();
+        let mut split = line.splitn(2, ":");
 
-        // Skip no colon line
-        if !(split.len() == 2) { continue };
+        let header_name = split.next().expect("Line cannot be empty, checked when read file");
+        let header_value = split.next().unwrap_or_default();
 
-        let header_name = HeaderName::from_str(split[0]).unwrap();
-        let header_value = HeaderValue::from_str(split[1]).unwrap();
-        headers.append(header_name, header_value);
+        // Skip no colon lines
+        if header_value.is_empty() {
+            continue
+        }
+        headers.append(
+            HeaderName::from_str(header_name).unwrap(),
+            HeaderValue::from_str(header_value).unwrap(),
+        );
     }
     return headers;
 }

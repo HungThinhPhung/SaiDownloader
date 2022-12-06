@@ -39,10 +39,21 @@ pub fn remove_download_folder(dir: &str) {
     fs::remove_dir_all(dir).expect(&get_format_msg("Cannot remove folder", dir));
 }
 
-pub fn text_to_lines(path: PathBuf) -> Vec<String> {
-    let contents = fs::read_to_string(path).unwrap();
-    let iter_lines = contents.split(LINE_ENDING);
-    iter_lines.map(|x| x.to_string()).collect()
+pub fn get_raw_file_content(path: PathBuf) -> String {
+    fs::read_to_string(path).unwrap()
+}
+
+pub fn get_lines(path: PathBuf) -> Vec<String> {
+    let content = get_raw_file_content(path);
+    let mut lines = content.split(LINE_ENDING);
+
+    // Remove empty lines
+    lines.filter_map(|mut line| {
+        line = line.trim();
+        if line.is_empty() {
+            None
+        } else { Some(line.to_string()) }
+    }).collect()
 }
 
 pub fn load_toml(path: PathBuf) {

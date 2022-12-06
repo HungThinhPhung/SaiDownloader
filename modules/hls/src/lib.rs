@@ -3,29 +3,15 @@ extern crate core;
 #[cfg(test)]
 mod test;
 
+use std::fmt;
 use std::time::Duration;
 use bytes::Bytes;
 use saidl_helper::file::{create_output_folder, remove_download_folder, write_data_file};
-use saidl_helper::{get_format_msg, run_os_command};
+use saidl_helper::{get_format_msg, run_os_command, http::send_request};
 use reqwest::{blocking::Client, header::HeaderMap};
 
-pub fn send_request(url: &str, headers: &Option<HeaderMap>) -> Result<Bytes, String> {
-    let client = Client::new();
-    let mut req_builder = client.get(url);
-    req_builder = req_builder.timeout(Duration::new(1000, 0));
-    match headers {
-        None => {}
-        Some(headers) => {
-            req_builder = req_builder.headers(headers.clone());
-        }
-    }
-    println!("Downloading {}", url);
-    let response = req_builder.send().unwrap();
-    let status_code = response.status().as_u16();
-    if status_code >= 400 {
-        return Err(format!("{} status code for {}", status_code, url));
-    }
-    // let response = reqwest::blocking::get(url).expect(&get_format_msg("Send request failed", url));
+pub fn get_response_bytes(url: &str, headers: &Option<HeaderMap>) -> Result<Bytes, fmt::Error> {
+    let response = send_request(url, headers)?;
     let data = response.bytes().expect(&get_format_msg("Unpack data failed: {}", url));
     return Ok(data);
 }
@@ -41,7 +27,7 @@ pub fn download(input: &Vec<String>, png: bool, keep: bool, headers: &Option<Hea
 
     // Download all file
     for (index, url) in input.iter().enumerate() {
-        let http_result = send_request(url, headers);
+        let http_result = get_response_bytes(url, headers);
         let mut data: Bytes;
         match http_result {
             Err(e) => {

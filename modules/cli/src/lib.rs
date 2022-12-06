@@ -4,12 +4,12 @@ use std::path::PathBuf;
 use crate::command::{Cli, Commands, EBCommand, HLSCommand};
 use clap::Parser;
 use saidl_hls::download;
-use saidl_ebook::{Config, IterationConfig, TocConfig, EbookFlow, TocFlow, StandardFlow};
-use saidl_helper::{file::text_to_lines, http::{lines_to_header, HeaderMap}};
+use saidl_ebook::{Config, IterationConfig, TocConfig, EbookFlow, TocDownloader, StandardEpub, WriteBook};
+use saidl_helper::{file::get_lines, http::{lines_to_header, HeaderMap}};
 
 pub fn run() {
     let cli: Cli = Cli::parse();
-    let command = cli.command.expect("None is already redirected to help");
+    let command = cli.command.expect("Invalid commands is already handled by clap");
     match command {
         Commands::HLS(hls) => {
             handle_hls(hls);
@@ -27,13 +27,13 @@ pub fn handle_hls(hls: HLSCommand) {
         }
         Some(path) => {
             // Extract links from input
-            let mut content_lines = text_to_lines(path);
-            let links = link_filter(&mut content_lines);
+            let content_lines = get_lines(path);
+            let links = link_filter(content_lines.into_iter());
 
             // Extract headers from header file
             let headers = extract_header(hls.headers);
 
-            download(links, hls.png, hls.keep, &headers, hls.output);
+            download(&links, hls.png, hls.keep, &headers, hls.output);
         }
     }
 }
@@ -52,7 +52,10 @@ pub fn handle_eb(eb: EBCommand) {
                     let z = 1;
                 }
                 EbookFlow::Toc(t) => {
-                    <TocFlow as StandardFlow<TocConfig, String>>::execute(t);
+                    let downloader = TocDownloader::build(t, config.title_selector, config.content_selector);
+                    let content = downloader.download();
+                    let writer = StandardEpub::build(config.name, content);
+                    writer.write().unwrap();
                 }
             }
             let x = 1;
@@ -60,17 +63,16 @@ pub fn handle_eb(eb: EBCommand) {
     }
 }
 
-fn link_filter(links: &mut Vec<String>) -> &mut Vec<String> {
-    links.retain(|i| i.starts_with("http"));
-    return links;
+fn link_filter(links: impl Iterator<Item=String>) -> Vec<String> {
+    links.filter(|i| i.starts_with("http")).collect()
 }
 
 fn extract_header(path: Option<PathBuf>) -> Option<HeaderMap> {
     match path {
         None => None,
         Some(p) => {
-            let header_lines = text_to_lines(p);
-            Some(lines_to_header(&header_lines))
+            let header_lines = get_lines(p);
+            Some(lines_to_header(header_lines.into_iter()))
         }
     }
 }

@@ -1,13 +1,14 @@
 mod dom;
 
 use std::fmt;
-use std::fmt::{Debug, Display, format};
+use std::fmt::Display;
 use std::fs::File;
 use epub_builder::{EpubBuilder, EpubContent, ReferenceType, ZipLibrary};
-use scraper::Selector;
+use scraper::{Html};
 use saidl_helper::http::send_request;
 
 use serde::Deserialize;
+use crate::dom::{single_page_extract, single_page_extract_with_next_url};
 
 
 #[derive(Deserialize)]
@@ -115,47 +116,20 @@ pub struct TocDownloader {
 }
 
 pub struct SinglePageContent {
-    next_url: Option<String>,
     title: String,
     content: String,
 }
 
 impl SinglePageContent {
-    pub fn to_chapter(&self) -> Chapter<String> {
-        Chapter { title: self.title.clone(), content: self.content.clone() }
+    pub fn to_chapter(self) -> Chapter<String> {
+        Chapter { title: self.title, content: self.content }
     }
 }
 
-pub fn single_page_download(url: &str, title_selector: &str, content_selector: &str, next_url_selector: Option<&str>) -> SinglePageContent {
+pub fn single_page_download(url: &str) -> Html {
     let response = send_request(&url, &None).unwrap();
     let raw_html = response.text().unwrap();
-    let document = dom::get_dom(&raw_html);
-    let title_selector = Selector::parse(title_selector).unwrap();
-    let content_selector = Selector::parse(content_selector).unwrap();
-    let title_raw_data = document.select(&title_selector).next().unwrap();
-    let content_raw_data = document.select(&content_selector).next().unwrap();
-    let next_url: Option<String> = match next_url_selector {
-        // TODO: Handle this case (only for iteration flow)
-        Some(selection) => {
-            let next_selector = Selector::parse(selection).unwrap();
-            let raw_selector = document.select(&next_selector).next().unwrap();
-            let url = raw_selector.value().attr("href");
-            let return_url = match url {
-                Some(u) => Some(u.to_string()),
-                None => None,
-            };
-            return_url
-        },
-        None => None
-    };
-    let (mut title, mut content) = (String::new(), String::new());
-    for t in title_raw_data.text() {
-        title.push_str(t);
-    }
-    for c in content_raw_data.text() {
-        content.push_str(c);
-    }
-    return SinglePageContent { next_url, title, content}
+    dom::get_dom(&raw_html)
 }
 
 impl IterDownloader {
@@ -168,14 +142,15 @@ impl IterDownloader {
     pub fn download(self, title_selector: String, content_selector: String) -> StandardContent {
         let mut result = Vec::new();
         let mut url = self.config.base_url;
-        let next_selector: Option<&str> = Some(&self.config.next_selector);
+        let next_selector = self.config.next_selector;
         loop {
-            let page_content = single_page_download(&url, &title_selector, &content_selector, next_selector);
+            let document = single_page_download(&url);
+            let (page_content, next_url) = single_page_extract_with_next_url(&document, &title_selector, &content_selector, &next_selector);
             result.push(page_content.to_chapter());
             if url == self.config.stop_url {
                 break
             }
-            url = page_content.next_url.unwrap();
+            url = next_url.unwrap();
         }
         result
     }
@@ -192,7 +167,8 @@ impl NumDownloader {
         let mut result = Vec::new();
         for number in self.config.start..=self.config.end {
             let url = self.config.pattern.replace("$", &number.to_string());
-            let page_content = single_page_download(&url, &title_selector, &content_selector, None);
+            let document = single_page_download(&url);
+            let page_content = single_page_extract(&document, &title_selector, &content_selector);
             result.push(page_content.to_chapter());
         }
         result
@@ -210,7 +186,8 @@ impl TocDownloader {
         let mut result = Vec::new();
         let links = self.extract_links().unwrap();
         for link in links {
-            let page_content = single_page_download(&link, &title_selector, &content_selector, None);
+            let document = single_page_download(&link);
+            let page_content = single_page_extract(&document, &title_selector, &content_selector);
             result.push(page_content.to_chapter());
         }
         result

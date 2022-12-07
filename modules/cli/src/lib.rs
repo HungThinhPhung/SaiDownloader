@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use crate::command::{Cli, Commands, EBCommand, HLSCommand};
 use clap::Parser;
 use saidl_hls::download;
-use saidl_ebook::{Config, IterationConfig, TocConfig, EbookFlow, TocDownloader, StandardEpub, WriteBook, NumDownloader, IterDownloader};
+use saidl_ebook::{Config,EbookFlow, TocDownloader, StandardEpub, WriteBook, NumDownloader, IterDownloader};
 use saidl_helper::{file::get_lines, http::{lines_to_header, HeaderMap}};
 
 pub fn run() {
@@ -65,7 +65,6 @@ pub fn handle_eb(eb: EBCommand) {
                     writer.write().unwrap();
                 }
             }
-            let x = 1;
         }
     }
 }

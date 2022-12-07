@@ -45,7 +45,7 @@ pub fn get_raw_file_content(path: PathBuf) -> String {
 
 pub fn get_lines(path: PathBuf) -> Vec<String> {
     let content = get_raw_file_content(path);
-    let mut lines = content.split(LINE_ENDING);
+    let lines = content.split(LINE_ENDING);
 
     // Remove empty lines
     lines.filter_map(|mut line| {
@@ -54,8 +54,4 @@ pub fn get_lines(path: PathBuf) -> Vec<String> {
             None
         } else { Some(line.to_string()) }
     }).collect()
-}
-
-pub fn load_toml(path: PathBuf) {
-
 }

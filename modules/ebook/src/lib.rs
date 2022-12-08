@@ -69,7 +69,7 @@ pub trait WriteBook<T, U> where
 {
     fn build(book_name: T, content: U) -> Self;
 
-    fn write(self) -> Result<(), std::fmt::Error>;
+    fn write(self, chapter_num: bool) -> Result<(), std::fmt::Error>;
 }
 
 pub type StandardContent = Vec<Chapter<String>>;
@@ -87,15 +87,19 @@ impl WriteBook<String, StandardContent> for StandardEpub {
         }
     }
 
-    fn write(self) -> Result<(), std::fmt::Error>{
+    fn write(self, chapter_num: bool) -> Result<(), std::fmt::Error>{
         let mut file = File::create(self.book_name.to_owned() + ".epub").unwrap();
         let mut ebook_builder = EpubBuilder::new(ZipLibrary::new().unwrap()).unwrap();
         ebook_builder.metadata("author", "Sai").unwrap().metadata("title", &self.book_name).unwrap();
         for (id, chapter) in self.content.into_iter().enumerate() {
-            let content = content_to_xhtml(&chapter.title,&chapter.content);
+            let Chapter { mut title, content } = chapter;
+            if chapter_num {
+                title = format!("Chapter {}: {}", id + 1, title);
+            }
+            let content = content_to_xhtml(&title, &content);
             ebook_builder
                 .add_content(EpubContent::new(format!("{}.xhtml", id), content.as_bytes())
-                    .title(&chapter.title)
+                    .title(&title)
                     .reftype(ReferenceType::TitlePage)).unwrap();
         }
         ebook_builder.inline_toc().generate(&mut file).unwrap();
@@ -222,7 +226,7 @@ mod tests {
         ];
 
         let writer = StandardEpub::build("TestBook".to_string(), content);
-        assert!(writer.write().is_ok());
+        assert!(writer.write(false).is_ok());
         assert!(fs::remove_file("TestBook.epub").is_ok());
     }
 }

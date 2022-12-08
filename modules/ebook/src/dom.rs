@@ -23,15 +23,22 @@ pub fn get_all_urls(raw_html: &str, void_sub: &str) -> Vec<String> {
 
 pub fn get_text_from_selector(document: &Html, selector: &str) -> String {
     let mut result = String::new();
-    let first_select_result = get_first_selection(&document, selector);
-    for item in first_select_result.text() {
-        result.push_str(item);
+    match get_first_selection(&document, selector){
+        Some(items) => {
+            for item in items.text() {
+                result.push_str(item);
+            }
+        },
+        None => {
+            return "".to_string();
+        }
     }
+
     return result;
 }
 
 pub fn get_url_from_selector(document: &Html, selector: &str) -> Option<String> {
-    let first_select_result = get_first_selection(&document, selector);
+    let first_select_result = get_first_selection(&document, selector).unwrap();
     let url = first_select_result.value().attr("href");
     match url {
         Some(u) => Some(u.to_string()),
@@ -39,14 +46,17 @@ pub fn get_url_from_selector(document: &Html, selector: &str) -> Option<String> 
     }
 }
 
-fn get_first_selection<'a>(document: &'a Html, selector: &str) -> ElementRef<'a> {
+fn get_first_selection<'a>(document: &'a Html, selector: &str) -> Option<ElementRef<'a>> {
     let parsed_selector = Selector::parse(selector).unwrap();
-    document.select(&parsed_selector).next().unwrap()
+    document.select(&parsed_selector).next()
 }
 
 pub async fn single_page_extract(document: &Html, title_selector: &str, content_selector: &str) -> Chapter<String> {
     let title = get_text_from_selector(document, title_selector);
     let content = get_text_from_selector(document, content_selector);
+    if content.is_empty() {
+        println!("Empty content at chapter {}", title);
+    }
     Chapter { title, content }
 }
 

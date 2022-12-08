@@ -63,7 +63,7 @@ pub async fn handle_eb(eb: EBCommand) {
                 }
             };
             let writer = StandardEpub::build(book_name, content);
-            writer.write().unwrap();
+            writer.write(eb.chapter_num).unwrap();
         }
     }
 }

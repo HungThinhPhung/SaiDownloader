@@ -1,0 +1,11 @@
+name = "BuongRaEmPhuThuyKia"
+title_selector = ".heading-font"
+content_selector = "#inner_chap_content_1"
+
+[flow]
+mode = "num"
+
+    [flow.args]
+    pattern = "https://truyenyy.vip/truyen/buong-ra-em-phu-thuy-kia/chuong-$.html"
+    end = 1504
+    start = 1

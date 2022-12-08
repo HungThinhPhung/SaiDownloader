@@ -31,6 +31,10 @@ pub struct EBCommand {
     /// Header file
     #[clap(short='H', long, value_parser, value_name = "FILE")]
     pub headers: Option<PathBuf>,
+
+    /// Add chapter index number at title
+    #[clap(long, short, value_parser, default_value_t = false)]
+    pub chapter_num: bool,
 }
 
 #[derive(Parser)]

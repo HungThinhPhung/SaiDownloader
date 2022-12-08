@@ -1,0 +1,11 @@
+name = "ThienDaoPhuongTrinhThuc"
+title_selector = "div.w3-row:nth-child(1) > ul:nth-child(1) > li:nth-child(3) > h3:nth-child(1)"
+content_selector = "#content"
+
+[flow]
+mode = "iter"
+
+    [flow.args]
+    base_url = "https://truyenchuth.com/truyen-thien-dao-phuong-trinh-thuc/chuong-01-tieu-tran.html"
+    next_selector = "div.w3-center:nth-child(2) > a:nth-last-child(1)"
+    stop_url = "https://truyenchuth.com/truyen-thien-dao-phuong-trinh-thuc/chuong-886-gia-vien-ha.html"

@@ -1,0 +1,11 @@
+name = "DongKinhDaoSi"
+title_selector = ".chapter > h2:nth-child(2)"
+content_selector = "div.box-chap:nth-child(3)"
+
+[flow]
+mode = "toc"
+
+    [flow.args]
+    base_url = "https://truyen.tangthuvien.vn/story/chapters?story_id=207&chapter_id=2417795"
+    toc_selector = ""
+    void_sub = "https://truyen.tangthuvien.vn/doc-truyen/dong-kinh-dao-si/chuong-1"

@@ -9,8 +9,8 @@ use saidl_helper::file::{create_output_folder, remove_download_folder, write_dat
 use saidl_helper::{get_format_msg, run_os_command, http::send_request};
 use reqwest::{header::HeaderMap};
 
-pub async fn get_response_bytes(url: &str, headers: &Option<HeaderMap>) -> Result<Bytes, fmt::Error> {
-    let response = send_request(url, headers).await?;
+pub async fn get_response_bytes(url: &str, headers: &Option<HeaderMap>, h2: bool) -> Result<Bytes, fmt::Error> {
+    let response = send_request(url, headers, h2).await?;
     let data = response.bytes().await.expect(&get_format_msg("Unpack data failed: {}", url));
     return Ok(data);
 }
@@ -26,7 +26,7 @@ pub async fn download(input: &Vec<String>, png: bool, keep: bool, headers: &Opti
 
     // Download all file
     for (index, url) in input.iter().enumerate() {
-        let http_result = get_response_bytes(url, headers);
+        let http_result = get_response_bytes(url, headers, false);
         let mut data: Bytes;
         match http_result.await {
             Err(e) => {

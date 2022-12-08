@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use crate::command::{Cli, Commands, EBCommand, HLSCommand};
 use clap::Parser;
 use saidl_hls::download;
-use saidl_ebook::{Config,EbookFlow, TocDownloader, StandardEpub, WriteBook, NumDownloader, IterDownloader};
+use saidl_ebook::{Config, EbookFlow, TocDownloader, StandardEpub, WriteBook, NumDownloader, IterDownloader, EBConfig};
 use saidl_helper::{file::get_lines, http::{lines_to_header, HeaderMap}};
 
 pub async fn run() {
@@ -46,18 +46,20 @@ pub async fn handle_eb(eb: EBCommand) {
             let contents = std::fs::read_to_string(path).unwrap();
             let config: Config = toml::from_str(&contents).unwrap();
             let book_name = config.name.clone();
+            let headers = extract_header(eb.headers);
+            let cli_config = EBConfig { title_selector: config.title_selector, content_selector: config.content_selector, h2: eb.h2, headers: &headers };
             let content = match config.flow {
                 EbookFlow::Iter(f) => {
                     let downloader = IterDownloader::build(f);
-                    downloader.download(config.title_selector, config.content_selector).await
+                    downloader.download(cli_config).await
                 }
                 EbookFlow::Toc(f) => {
                     let downloader = TocDownloader::build(f);
-                    downloader.download(config.title_selector, config.content_selector).await
+                    downloader.download(cli_config).await
                 }
                 EbookFlow::Num(f) => {
                     let downloader = NumDownloader::build(f);
-                    downloader.download(config.title_selector, config.content_selector).await
+                    downloader.download(cli_config).await
                 }
             };
             let writer = StandardEpub::build(book_name, content);

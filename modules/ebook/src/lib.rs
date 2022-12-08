@@ -115,20 +115,9 @@ pub struct TocDownloader {
     config: TocConfig
 }
 
-pub struct SinglePageContent {
-    title: String,
-    content: String,
-}
-
-impl SinglePageContent {
-    pub fn to_chapter(self) -> Chapter<String> {
-        Chapter { title: self.title, content: self.content }
-    }
-}
-
-pub fn single_page_download(url: &str) -> Html {
-    let response = send_request(&url, &None).unwrap();
-    let raw_html = response.text().unwrap();
+pub async fn single_page_download(url: &str) -> Html {
+    let response = send_request(&url, &None).await.unwrap();
+    let raw_html = response.text().await.unwrap();
     dom::get_dom(&raw_html)
 }
 
@@ -139,14 +128,14 @@ impl IterDownloader {
         }
     }
 
-    pub fn download(self, title_selector: String, content_selector: String) -> StandardContent {
+    pub async fn download(self, title_selector: String, content_selector: String) -> StandardContent {
         let mut result = Vec::new();
         let mut url = self.config.base_url;
         let next_selector = self.config.next_selector;
         loop {
-            let document = single_page_download(&url);
-            let (page_content, next_url) = single_page_extract_with_next_url(&document, &title_selector, &content_selector, &next_selector);
-            result.push(page_content.to_chapter());
+            let document = single_page_download(&url).await;
+            let (page_content, next_url) = single_page_extract_with_next_url(&document, &title_selector, &content_selector, &next_selector).await;
+            result.push(page_content);
             if url == self.config.stop_url {
                 break
             }
@@ -163,13 +152,13 @@ impl NumDownloader {
         }
     }
 
-    pub fn download(self, title_selector: String, content_selector: String) -> StandardContent {
+    pub async fn download(self, title_selector: String, content_selector: String) -> StandardContent {
         let mut result = Vec::new();
         for number in self.config.start..=self.config.end {
             let url = self.config.pattern.replace("$", &number.to_string());
-            let document = single_page_download(&url);
-            let page_content = single_page_extract(&document, &title_selector, &content_selector);
-            result.push(page_content.to_chapter());
+            let document = single_page_download(&url).await;
+            let page_content = single_page_extract(&document, &title_selector, &content_selector).await;
+            result.push(page_content);
         }
         result
     }
@@ -182,22 +171,22 @@ impl TocDownloader {
         }
     }
 
-    pub fn download(self, title_selector: String, content_selector: String) -> StandardContent {
+    pub async fn download(self, title_selector: String, content_selector: String) -> StandardContent {
         let mut result = Vec::new();
-        let links = self.extract_links().unwrap();
+        let links = self.extract_links().await.unwrap();
         for link in links {
-            let document = single_page_download(&link);
-            let page_content = single_page_extract(&document, &title_selector, &content_selector);
-            result.push(page_content.to_chapter());
+            let document = single_page_download(&link).await;
+            let page_content = single_page_extract(&document, &title_selector, &content_selector).await;
+            result.push(page_content);
         }
         result
     }
 
-    fn extract_links(&self) -> Result<Vec<String>, fmt::Error> {
-        let base_page_response = send_request(&self.config.base_url, &None)?;
+    async fn extract_links(&self) -> Result<Vec<String>, fmt::Error> {
+        let base_page_response = send_request(&self.config.base_url, &None).await?;
         // In case of toc is a dedicate request
         let result = if self.config.toc_selector == "" {
-            let urls = dom::get_all_urls(&base_page_response.text().unwrap(), &self.config.void_sub);
+            let urls = dom::get_all_urls(&base_page_response.text().await.unwrap(), &self.config.void_sub);
             urls
         } else {
             // TODO: In case of toc is not a dedicate request

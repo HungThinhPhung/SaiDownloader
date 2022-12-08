@@ -7,20 +7,20 @@ use saidl_hls::download;
 use saidl_ebook::{Config,EbookFlow, TocDownloader, StandardEpub, WriteBook, NumDownloader, IterDownloader};
 use saidl_helper::{file::get_lines, http::{lines_to_header, HeaderMap}};
 
-pub fn run() {
+pub async fn run() {
     let cli: Cli = Cli::parse();
     let command = cli.command.expect("Invalid commands is already handled by clap");
     match command {
         Commands::HLS(hls) => {
-            handle_hls(hls);
+            handle_hls(hls).await;
         }
         Commands::EB(eb) => {
-            handle_eb(eb);
+            handle_eb(eb).await;
         }
     }
 }
 
-pub fn handle_hls(hls: HLSCommand) {
+pub async fn handle_hls(hls: HLSCommand) {
     match hls.input {
         None => {
             println!("Input file is required");
@@ -33,38 +33,35 @@ pub fn handle_hls(hls: HLSCommand) {
             // Extract headers from header file
             let headers = extract_header(hls.headers);
 
-            download(&links, hls.png, hls.keep, &headers, hls.output);
+            download(&links, hls.png, hls.keep, &headers, hls.output).await;
         }
     }
 }
 
-pub fn handle_eb(eb: EBCommand) {
+pub async fn handle_eb(eb: EBCommand) {
     match eb.input {
         None => { println!("Input file is required"); }
         Some(path) => {
+            println!("{}", eb.h2);
             let contents = std::fs::read_to_string(path).unwrap();
             let config: Config = toml::from_str(&contents).unwrap();
-            let y = config.flow;
-            match y {
+            let book_name = config.name.clone();
+            let content = match config.flow {
                 EbookFlow::Iter(f) => {
                     let downloader = IterDownloader::build(f);
-                    let content = downloader.download(config.title_selector, config.content_selector);
-                    let writer = StandardEpub::build(config.name, content);
-                    writer.write().unwrap();
+                    downloader.download(config.title_selector, config.content_selector).await
                 }
                 EbookFlow::Toc(f) => {
                     let downloader = TocDownloader::build(f);
-                    let content = downloader.download(config.title_selector, config.content_selector);
-                    let writer = StandardEpub::build(config.name, content);
-                    writer.write().unwrap();
+                    downloader.download(config.title_selector, config.content_selector).await
                 }
                 EbookFlow::Num(f) => {
                     let downloader = NumDownloader::build(f);
-                    let content = downloader.download(config.title_selector, config.content_selector);
-                    let writer = StandardEpub::build(config.name, content);
-                    writer.write().unwrap();
+                    downloader.download(config.title_selector, config.content_selector).await
                 }
-            }
+            };
+            let writer = StandardEpub::build(book_name, content);
+            writer.write().unwrap();
         }
     }
 }

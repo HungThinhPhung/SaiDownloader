@@ -1,9 +1,9 @@
 pub use reqwest::{header::{HeaderMap, HeaderName, HeaderValue},
-                  blocking::{Client, Response}};
+                  Client, Response};
 use std::{fmt, str::FromStr, time::Duration};
 use serde::ser::Error;
 
-pub fn send_request(url: &str, headers: &Option<HeaderMap>) -> Result<Response, fmt::Error> {
+pub async fn send_request(url: &str, headers: &Option<HeaderMap>) -> Result<Response, fmt::Error> {
     let client = Client::new();
     let mut req_builder = client.get(url);
     req_builder = req_builder.timeout(Duration::new(1000, 0));
@@ -14,7 +14,7 @@ pub fn send_request(url: &str, headers: &Option<HeaderMap>) -> Result<Response, 
         }
     }
     println!("Downloading {}", url);
-    let response = req_builder.send().unwrap();
+    let response = req_builder.send().await.unwrap();
     let status_code = response.status().as_u16();
     if status_code >= 400 {
         let err = fmt::Error::custom::<String>(format!("{} status code for {}", status_code, url).into());

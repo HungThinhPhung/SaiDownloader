@@ -6,6 +6,7 @@ use clap::{Subcommand, Parser};
 pub struct Cli {
     #[clap(subcommand)]
     pub command: Option<Commands>,
+
 }
 
 #[derive(Subcommand)]
@@ -23,6 +24,10 @@ pub struct EBCommand {
     /// Load input config file
     #[clap(short, long, value_parser, value_name = "FILE")]
     pub input: Option<PathBuf>,
+
+    /// Enable http2 mode
+    #[clap(long, value_parser, default_value_t = false)]
+    pub h2: bool,
 }
 
 #[derive(Parser)]
@@ -47,4 +52,9 @@ pub struct HLSCommand {
     /// Output file name
     #[clap(short, long, value_parser)]
     pub output: Option<String>,
+
+
+    /// Enable http2 mode
+    #[clap(long, value_parser, default_value_t = false)]
+    pub h2: bool,
 }

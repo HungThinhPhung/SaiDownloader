@@ -1,7 +1,7 @@
 use scraper::{ElementRef, Html, Selector};
 use select::document::Document;
 use select::predicate::Name;
-use crate::SinglePageContent;
+use crate::Chapter;
 
 const CURRENT_URLS: [&'static str; 2] = ["javascript:void(0);", "#"];
 
@@ -44,14 +44,14 @@ fn get_first_selection<'a>(document: &'a Html, selector: &str) -> ElementRef<'a>
     document.select(&parsed_selector).next().unwrap()
 }
 
-pub fn single_page_extract(document: &Html, title_selector: &str, content_selector: &str) -> SinglePageContent {
+pub async fn single_page_extract(document: &Html, title_selector: &str, content_selector: &str) -> Chapter<String> {
     let title = get_text_from_selector(document, title_selector);
     let content = get_text_from_selector(document, content_selector);
-    SinglePageContent { title, content }
+    Chapter { title, content }
 }
 
-pub fn single_page_extract_with_next_url(document: &Html, title_selector: &str, content_selector: &str, next_url_selector: &str) ->(SinglePageContent, Option<String>) {
-    let page_content = single_page_extract(document, title_selector, content_selector);
+pub async fn single_page_extract_with_next_url(document: &Html, title_selector: &str, content_selector: &str, next_url_selector: &str) -> (Chapter<String>, Option<String>) {
+    let page_content = single_page_extract(document, title_selector, content_selector).await;
     let next_url = get_url_from_selector(document, next_url_selector);
     (page_content, next_url)
 }

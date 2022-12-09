@@ -12,4 +12,4 @@ members = [ "modules/*" ]
 saidl-helper = { path = "modules/helper" }
 saidl-hls = { path = "modules/hls" }
 saidl-cli = { path = "modules/cli" }
-tokio = { version = "1.23.0", features = ["macros", "io-util", "net", "rt-multi-thread"] }
+tokio = { version = "1.23.0", features = ["full"] }

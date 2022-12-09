@@ -8,6 +8,9 @@ use bytes::Bytes;
 use saidl_helper::file::{create_output_folder, remove_download_folder, write_data_file};
 use saidl_helper::{get_format_msg, run_os_command, http::send_request};
 use reqwest::{header::HeaderMap};
+use futures::future::try_join_all;
+use tokio;
+use tokio::task::JoinHandle;
 
 pub async fn get_response_bytes(url: &str, headers: &Option<HeaderMap>, h2: bool) -> Result<Bytes, fmt::Error> {
     let response = send_request(url, headers, h2).await?;
@@ -19,37 +22,25 @@ pub fn strip_png(data: Bytes) -> Bytes {
     data.slice(8..)
 }
 
-pub async fn download(input: &Vec<String>, png: bool, keep: bool, headers: &Option<HeaderMap>, output: Option<String>) {
+pub async fn download(input: &Vec<String>, png: bool, h2: bool, keep: bool, headers: &Option<HeaderMap>, output: Option<String>) {
     let list_file = "list.txt";
-    let dir = create_output_folder();
+    let dir: String = create_output_folder();
     let mut downloaded_file = String::new();
 
     // Download all file
     for (index, url) in input.iter().enumerate() {
-        let http_result = get_response_bytes(url, headers, false);
-        let mut data: Bytes;
-        match http_result.await {
-            Err(e) => {
-                println!("{e}");
-                return;
-            }
-            Ok(b) => data = b
-        };
-        if png {
-            data = strip_png(data);
-        }
         let mut file_loc = String::new();
         let mut file_name = index.to_string();
         file_name.push_str(".html");
-        write_data_file(&data, dir.as_ref(), &file_name);
         file_loc.push_str("file ./");
         file_loc.push_str(&file_name);
         file_loc.push_str("\n");
         downloaded_file.push_str(file_loc.as_str());
+        download_and_write_fragment(url, headers, png, h2, file_name, &dir).await;
     }
     let list_file_data = downloaded_file.as_bytes();
     write_data_file(list_file_data, dir.as_ref(), list_file);
-
+    // let _ = try_join_all(tasks.iter()).await;
     // Create output video file name
     let mut output_video_name: String;
     match output {
@@ -74,4 +65,12 @@ pub async fn download(input: &Vec<String>, png: bool, keep: bool, headers: &Opti
     if !keep {
         remove_download_folder(&dir);
     }
+}
+
+pub async fn download_and_write_fragment(url: &str, headers: &Option<HeaderMap>, png: bool, h2: bool, file_name: String, dir: &str) {
+    let mut data = get_response_bytes(url, headers, h2).await.unwrap();
+    if png {
+        data = strip_png(data);
+    }
+    write_data_file(&data, dir, &file_name);
 }

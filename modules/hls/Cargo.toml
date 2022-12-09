@@ -11,3 +11,5 @@ bytes = { version = "1.2.1" }
 
 # Local dependencies
 saidl-helper = { path = "../helper" }
+futures = "0.3.25"
+tokio = { version = "1.23.0", features = ["full"] }

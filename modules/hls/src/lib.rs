@@ -8,9 +8,7 @@ use bytes::Bytes;
 use saidl_helper::file::{create_output_folder, remove_download_folder, write_data_file};
 use saidl_helper::{get_format_msg, run_os_command, http::send_request};
 use reqwest::{header::HeaderMap};
-use futures::future::try_join_all;
 use tokio;
-use tokio::task::JoinHandle;
 
 pub async fn get_response_bytes(url: &str, headers: &Option<HeaderMap>, h2: bool) -> Result<Bytes, fmt::Error> {
     let response = send_request(url, headers, h2).await?;
@@ -27,6 +25,7 @@ pub async fn download(input: &Vec<String>, png: bool, h2: bool, keep: bool, head
     let dir: String = create_output_folder();
     let mut downloaded_file = String::new();
 
+    let mut fragments = Vec::new();
     // Download all file
     for (index, url) in input.iter().enumerate() {
         let mut file_loc = String::new();
@@ -36,8 +35,16 @@ pub async fn download(input: &Vec<String>, png: bool, h2: bool, keep: bool, head
         file_loc.push_str(&file_name);
         file_loc.push_str("\n");
         downloaded_file.push_str(file_loc.as_str());
-        download_and_write_fragment(url, headers, png, h2, file_name, &dir).await;
+        // download_and_write_fragment(url, headers, png, h2, file_name, &dir).await;
+        fragments.push(HLSFragmentHandler::new(url.to_string(), headers.clone(), png, h2, file_name, dir.clone()));
+
     }
+
+    let tasks: Vec<_> = fragments.into_iter().map(|frag| tokio::spawn(async move { frag.download_and_write().await ; }) ).collect();
+    for task in tasks {
+        task.await.unwrap();
+    }
+
     let list_file_data = downloaded_file.as_bytes();
     write_data_file(list_file_data, dir.as_ref(), list_file);
     // let _ = try_join_all(tasks.iter()).await;
@@ -64,6 +71,29 @@ pub async fn download(input: &Vec<String>, png: bool, h2: bool, keep: bool, head
     run_os_command(&ffmpeg_cmd);
     if !keep {
         remove_download_folder(&dir);
+    }
+}
+
+pub struct HLSFragmentHandler {
+    url: String,
+    headers: Option<HeaderMap>,
+    png: bool,
+    h2: bool,
+    file_name: String,
+    dir: String
+}
+
+impl HLSFragmentHandler {
+    fn new(url: String, headers: Option<HeaderMap>, png: bool, h2: bool, file_name: String, dir: String) -> Self {
+        Self { url, headers, png, h2, file_name, dir}
+    }
+
+    async fn download_and_write (self) {
+        let mut data = get_response_bytes(&self.url, &self.headers, self.h2).await.unwrap();
+        if self.png {
+            data = strip_png(data);
+        }
+        write_data_file(&data, &self.dir, &self.file_name);
     }
 }
 

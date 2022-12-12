@@ -20,7 +20,7 @@ pub fn strip_png(data: Bytes) -> Bytes {
     data.slice(8..)
 }
 
-pub async fn download(input: &Vec<String>, png: bool, h2: bool, keep: bool, headers: &Option<HeaderMap>, output: Option<String>) {
+pub async fn download(input: &Vec<String>, png: bool, h2: bool, multi_thread:bool, keep: bool, headers: &Option<HeaderMap>, output: Option<String>) {
     let list_file = "list.txt";
     let dir: String = create_output_folder();
     let mut downloaded_file = String::new();
@@ -39,10 +39,15 @@ pub async fn download(input: &Vec<String>, png: bool, h2: bool, keep: bool, head
         fragments.push(HLSFragmentHandler::new(url.to_string(), headers.clone(), png, h2, file_name, dir.clone()));
 
     }
-
-    let tasks: Vec<_> = fragments.into_iter().map(|frag| tokio::spawn(async move { frag.download_and_write().await ; }) ).collect();
-    for task in tasks {
-        task.await.unwrap();
+    if multi_thread {
+        let tasks: Vec<_> = fragments.into_iter().map(|frag| tokio::spawn(async move { frag.download_and_write().await; })).collect();
+        for task in tasks {
+            task.await.unwrap();
+        }
+    } else {
+        for f in fragments {
+            f.download_and_write().await;
+        }
     }
 
     let list_file_data = downloaded_file.as_bytes();

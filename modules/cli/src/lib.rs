@@ -33,7 +33,7 @@ pub async fn handle_hls(hls: HLSCommand) {
             // Extract headers from header file
             let headers = extract_header(hls.headers);
 
-            download(&links, hls.png, hls.h2, hls.keep, &headers, hls.output).await;
+            download(&links, hls.png, hls.h2, hls.multi_thread, hls.keep, &headers, hls.output).await;
         }
     }
 }

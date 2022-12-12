@@ -63,4 +63,8 @@ pub struct HLSCommand {
     /// Enable http2 mode
     #[clap(long, value_parser, default_value_t = false)]
     pub h2: bool,
+
+    /// Enable multi thread mode
+    #[clap(short, long, value_parser, default_value_t = false)]
+    pub multi_thread: bool,
 }

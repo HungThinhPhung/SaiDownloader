@@ -37,8 +37,8 @@ pub fn lines_to_header(lines: impl Iterator<Item=String>) -> HeaderMap {
         // Split string by first colon
         let mut split = line.splitn(2, ":");
 
-        let header_name = split.next().expect("Line cannot be empty, checked when read file");
-        let header_value = split.next().unwrap_or_default();
+        let header_name = split.next().expect("Line cannot be empty, checked when read file").trim();
+        let header_value = split.next().unwrap_or_default().trim();
 
         // Skip no colon lines
         if header_value.is_empty() {

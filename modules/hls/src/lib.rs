@@ -6,12 +6,12 @@ mod test;
 use std::fmt;
 use bytes::Bytes;
 use saidl_helper::file::{create_output_folder, remove_download_folder, write_data_file};
-use saidl_helper::{get_format_msg, run_os_command, http::send_request};
+use saidl_helper::{get_format_msg, run_os_command, http::send_wrapped_request};
 use reqwest::{header::HeaderMap};
 use tokio;
 
-pub async fn get_response_bytes(url: &str, headers: &Option<HeaderMap>, h2: bool) -> Result<Bytes, fmt::Error> {
-    let response = send_request(url, headers, h2).await?;
+pub async fn get_response_bytes(url: &str, headers: &Option<HeaderMap>, h2: bool, delay: Option<u64>) -> Result<Bytes, fmt::Error> {
+    let response = send_wrapped_request(url, headers, h2, delay).await?;
     let data = response.bytes().await.expect(&get_format_msg("Unpack data failed: {}", url));
     return Ok(data);
 }
@@ -20,7 +20,7 @@ pub fn strip_png(data: Bytes) -> Bytes {
     data.slice(8..)
 }
 
-pub async fn download(input: &Vec<String>, png: bool, h2: bool, multi_thread:bool, keep: bool, headers: &Option<HeaderMap>, output: Option<String>) {
+pub async fn download(input: &Vec<String>, png: bool, h2: bool, multi_thread:bool, keep: bool, headers: &Option<HeaderMap>, output: Option<String>, delay: Option<u64>) {
     let list_file = "list.txt";
     let dir: String = create_output_folder();
     let mut downloaded_file = String::new();
@@ -36,7 +36,7 @@ pub async fn download(input: &Vec<String>, png: bool, h2: bool, multi_thread:boo
         file_loc.push_str("\n");
         downloaded_file.push_str(file_loc.as_str());
         // download_and_write_fragment(url, headers, png, h2, file_name, &dir).await;
-        fragments.push(HLSFragmentHandler::new(url.to_string(), headers.clone(), png, h2, file_name, dir.clone()));
+        fragments.push(HLSFragmentHandler::new(url.to_string(), headers.clone(), png, h2, file_name, dir.clone(), delay));
 
     }
     if multi_thread {
@@ -85,27 +85,20 @@ pub struct HLSFragmentHandler {
     png: bool,
     h2: bool,
     file_name: String,
-    dir: String
+    dir: String,
+    delay: Option<u64>,
 }
 
 impl HLSFragmentHandler {
-    fn new(url: String, headers: Option<HeaderMap>, png: bool, h2: bool, file_name: String, dir: String) -> Self {
-        Self { url, headers, png, h2, file_name, dir}
+    fn new(url: String, headers: Option<HeaderMap>, png: bool, h2: bool, file_name: String, dir: String, delay: Option<u64>) -> Self {
+        Self { url, headers, png, h2, file_name, dir, delay }
     }
 
     async fn download_and_write (self) {
-        let mut data = get_response_bytes(&self.url, &self.headers, self.h2).await.unwrap();
+        let mut data = get_response_bytes(&self.url, &self.headers, self.h2, self.delay).await.unwrap();
         if self.png {
             data = strip_png(data);
         }
         write_data_file(&data, &self.dir, &self.file_name);
     }
-}
-
-pub async fn download_and_write_fragment(url: &str, headers: &Option<HeaderMap>, png: bool, h2: bool, file_name: String, dir: &str) {
-    let mut data = get_response_bytes(url, headers, h2).await.unwrap();
-    if png {
-        data = strip_png(data);
-    }
-    write_data_file(&data, dir, &file_name);
 }

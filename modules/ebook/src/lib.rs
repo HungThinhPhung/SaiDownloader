@@ -5,7 +5,7 @@ use std::fmt::Display;
 use std::fs::File;
 use epub_builder::{EpubBuilder, EpubContent, ReferenceType, ZipLibrary};
 use scraper::{Html};
-use saidl_helper::http::{HeaderMap, send_request};
+use saidl_helper::http::{HeaderMap, send_wrapped_request};
 
 use serde::Deserialize;
 use crate::dom::{single_page_extract, single_page_extract_with_next_url};
@@ -17,6 +17,7 @@ pub struct Config {
     pub name: String,
     pub title_selector: String,
     pub content_selector: String,
+    pub delay: Option<u64>,
 }
 
 #[derive(Deserialize)]
@@ -111,7 +112,8 @@ pub struct EBConfig<'a> {
     pub title_selector: String,
     pub content_selector: String,
     pub h2: bool,
-    pub headers: &'a Option<HeaderMap>
+    pub headers: &'a Option<HeaderMap>,
+    pub delay: Option<u64>,
 }
 
 pub struct IterDownloader {
@@ -126,8 +128,8 @@ pub struct TocDownloader {
     config: TocConfig
 }
 
-pub async fn single_page_download(url: &str, headers: &Option<HeaderMap>, h2: bool) -> Html {
-    let response = send_request(&url, headers, h2).await.unwrap();
+pub async fn single_page_download(url: &str, headers: &Option<HeaderMap>, h2: bool, delay: Option<u64>) -> Html {
+    let response = send_wrapped_request(&url, headers, h2, delay).await.unwrap();
     let raw_html = response.text().await.unwrap();
     dom::get_dom(&raw_html)
 }
@@ -144,7 +146,7 @@ impl IterDownloader {
         let mut url = self.config.base_url;
         let next_selector = self.config.next_selector;
         loop {
-            let document = single_page_download(&url, cli_config.headers, cli_config.h2).await;
+            let document = single_page_download(&url, cli_config.headers, cli_config.h2, cli_config.delay).await;
             let (page_content, next_url) = single_page_extract_with_next_url(&document, &cli_config.title_selector, &cli_config.content_selector, &next_selector).await;
             result.push(page_content);
             if url == self.config.stop_url {
@@ -167,7 +169,7 @@ impl NumDownloader {
         let mut result = Vec::new();
         for number in self.config.start..=self.config.end {
             let url = self.config.pattern.replace("$", &number.to_string());
-            let document = single_page_download(&url, cli_config.headers, cli_config.h2).await;
+            let document = single_page_download(&url, cli_config.headers, cli_config.h2, cli_config.delay).await;
             let page_content = single_page_extract(&document, &cli_config.title_selector, &cli_config.content_selector).await;
             result.push(page_content);
         }
@@ -186,7 +188,7 @@ impl TocDownloader {
         let mut result = Vec::new();
         let links = self.extract_links(cli_config.headers, cli_config.h2).await.unwrap();
         for link in links {
-            let document = single_page_download(&link, cli_config.headers, cli_config.h2).await;
+            let document = single_page_download(&link, cli_config.headers, cli_config.h2, cli_config.delay).await;
             let page_content = single_page_extract(&document, &cli_config.title_selector, &cli_config.content_selector).await;
             result.push(page_content);
         }
@@ -194,7 +196,7 @@ impl TocDownloader {
     }
 
     async fn extract_links(&self, headers: &Option<HeaderMap>, h2: bool) -> Result<Vec<String>, fmt::Error> {
-        let base_page_response = send_request(&self.config.base_url, headers, h2).await?;
+        let base_page_response = send_wrapped_request(&self.config.base_url, headers, h2, None).await?;
         // In case of toc is a dedicate request
         let result = if self.config.toc_selector == "" {
             let urls = dom::get_all_urls(&base_page_response.text().await.unwrap(), &self.config.void_sub);

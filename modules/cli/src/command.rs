@@ -67,4 +67,7 @@ pub struct HLSCommand {
     /// Enable multi thread mode
     #[clap(short, long, value_parser, default_value_t = false)]
     pub multi_thread: bool,
+
+    #[clap(short, long, value_parser)]
+    pub delay: Option<u64>,
 }

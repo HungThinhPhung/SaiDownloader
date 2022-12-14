@@ -5,8 +5,21 @@ use serde::ser::Error;
 use tokio::time;
 
 // wrapped request is a request with retry and delay option
-pub async fn send_wrapped_request(url: &str, headers: &Option<HeaderMap>, h2: bool, delay: Option<u64>) -> Result<Response, fmt::Error> {
-    let response = send_request(url, headers, h2).await;
+pub async fn send_wrapped_request(url: &str, headers: &Option<HeaderMap>, h2: bool, delay: Option<u64>, retry: Option<u8>) -> Result<Response, fmt::Error> {
+    let mut response = send_request(url, headers, h2).await;
+    if response.is_err() && retry.is_some() {
+        let mut retry = retry.expect("Already checked");
+        loop {
+            // Wait 3 seconds before retry
+            time::sleep(time::Duration::from_secs(3)).await;
+            response = send_request(url, headers, h2).await;
+            println!("Failed to send, retry times remaining: {}", retry);
+            retry = retry - 1;
+            if response.is_ok() || retry == 0 {
+                break;
+            }
+        }
+    }
     return match delay {
         Some(second) => {
             time::sleep(time::Duration::from_secs(second)).await;

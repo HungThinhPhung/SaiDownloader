@@ -33,7 +33,7 @@ pub async fn handle_hls(hls: HLSCommand) {
             // Extract headers from header file
             let headers = extract_header(hls.headers);
 
-            download(&links, hls.png, hls.h2, hls.multi_thread, hls.keep, &headers, hls.output, hls.delay).await;
+            download(&links, hls.png, hls.h2, hls.multi_thread, hls.keep, &headers, hls.output, hls.delay, hls.retry).await;
         }
     }
 }
@@ -45,11 +45,10 @@ pub async fn handle_eb(eb: EBCommand) {
             println!("{}", eb.h2);
             let contents = std::fs::read_to_string(path).unwrap();
             let config: Config = toml::from_str(&contents).unwrap();
-            let book_name = config.name.clone();
-            let delay = config.delay;
+            let Config { title_selector, content_selector, delay, retry, flow, name} = config;
             let headers = extract_header(eb.headers);
-            let cli_config = EBConfig { title_selector: config.title_selector, content_selector: config.content_selector, h2: eb.h2, headers: &headers, delay };
-            let content = match config.flow {
+            let cli_config = EBConfig { title_selector, content_selector, h2: eb.h2, headers: &headers, delay, retry };
+            let content = match flow {
                 EbookFlow::Iter(f) => {
                     let downloader = IterDownloader::build(f);
                     downloader.download(cli_config).await
@@ -63,7 +62,7 @@ pub async fn handle_eb(eb: EBCommand) {
                     downloader.download(cli_config).await
                 }
             };
-            let writer = StandardEpub::build(book_name, content);
+            let writer = StandardEpub::build(name.clone(), content);
             writer.write(eb.chapter_num).unwrap();
         }
     }

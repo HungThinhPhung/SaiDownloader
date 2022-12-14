@@ -70,4 +70,7 @@ pub struct HLSCommand {
 
     #[clap(short, long, value_parser)]
     pub delay: Option<u64>,
+
+    #[clap(short, long, value_parser)]
+    pub retry: Option<u8>,
 }

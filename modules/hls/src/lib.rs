@@ -7,7 +7,7 @@ use std::fmt;
 use bytes::Bytes;
 use saidl_helper::file::{create_output_folder, remove_download_folder, write_data_file};
 use saidl_helper::{get_format_msg, run_os_command, http::send_wrapped_request};
-use reqwest::{header::HeaderMap};
+use reqwest_impersonate::{header::HeaderMap};
 use tokio;
 
 pub async fn get_response_bytes(url: &str, headers: &Option<HeaderMap>, h2: bool, delay: Option<u64>, retry: Option<u8>) -> Result<Bytes, fmt::Error> {

@@ -8,5 +8,6 @@ edition = "2021"
 [dependencies]
 serde = { version = "1.0.144", features = ["derive"] }
 tokio = { version = "1.23.0", features = ["full"] }
-reqwest = { version = "0.11.13", features = ["native-tls-alpn", "gzip", "deflate", "brotli"] }
+#reqwest = { version = "0.11.13", features = ["native-tls-alpn", "gzip", "deflate", "brotli"] }
+reqwest-impersonate = { git = "https://github.com/4JX/reqwest-impersonate.git", default-features = false, features = ["chrome", "deflate", "brotli", "gzip", "cookies"], rev = "5217922e7f2c2f48418ad2fe6ac1377c7319ca03" }
 http = "0.2.8"

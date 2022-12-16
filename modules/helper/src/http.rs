@@ -1,6 +1,7 @@
-pub use reqwest::{header::HeaderMap, Client, Response, Version};
+pub use reqwest_impersonate::{header::HeaderMap, ClientBuilder, Response, Version};
 use http::{header::HeaderName, HeaderValue};
 use std::{fmt, str::FromStr, time::Duration};
+use reqwest_impersonate::browser::ChromeVersion;
 use serde::ser::Error;
 use tokio::time;
 
@@ -30,7 +31,7 @@ pub async fn send_wrapped_request(url: &str, headers: &Option<HeaderMap>, h2: bo
 }
 
 pub async fn send_request(url: &str, headers: &Option<HeaderMap>, h2: bool) -> Result<Response, fmt::Error> {
-    let client = Client::new();
+    let client = ClientBuilder::new().chrome_builder(ChromeVersion::V106).build().unwrap();
     let mut req_builder = client.get(url);
     req_builder = req_builder.timeout(Duration::new(1000, 0));
     match headers {

@@ -1,5 +1,5 @@
+use clap::{Parser, Subcommand};
 use std::path::PathBuf;
-use clap::{Subcommand, Parser};
 
 #[derive(Parser)]
 #[clap(about, long_about = None, arg_required_else_help(true))]
@@ -29,7 +29,7 @@ pub struct EBCommand {
     pub h2: bool,
 
     /// Header file
-    #[clap(short='H', long, value_parser, value_name = "FILE")]
+    #[clap(short = 'H', long, value_parser, value_name = "FILE")]
     pub headers: Option<PathBuf>,
 
     /// Add chapter index number at title
@@ -45,7 +45,7 @@ pub struct HLSCommand {
     pub input: Option<PathBuf>,
 
     /// Header file
-    #[clap(short='H', long, value_parser, value_name = "FILE")]
+    #[clap(short = 'H', long, value_parser, value_name = "FILE")]
     pub headers: Option<PathBuf>,
 
     /// Enable png mode

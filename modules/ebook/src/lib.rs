@@ -1,15 +1,14 @@
 mod dom;
 
+use epub_builder::{EpubBuilder, EpubContent, ReferenceType, ZipLibrary};
+use saidl_helper::http::{send_wrapped_request, HeaderMap};
+use scraper::Html;
 use std::fmt;
 use std::fmt::Display;
 use std::fs::File;
-use epub_builder::{EpubBuilder, EpubContent, ReferenceType, ZipLibrary};
-use scraper::{Html};
-use saidl_helper::http::{HeaderMap, send_wrapped_request};
 
-use serde::Deserialize;
 use crate::dom::{single_page_extract, single_page_extract_with_next_url};
-
+use serde::Deserialize;
 
 #[derive(Deserialize)]
 pub struct Config {
@@ -57,7 +56,7 @@ pub enum EbookFlow {
     Toc(TocConfig),
 
     // Have an url pattern and a number replacer
-    Num(NumConfig)
+    Num(NumConfig),
 }
 
 pub struct Chapter<T: Display> {
@@ -65,9 +64,10 @@ pub struct Chapter<T: Display> {
     pub content: T,
 }
 
-pub trait WriteBook<T, U> where
+pub trait WriteBook<T, U>
+where
     T: Display,
-    U: IntoIterator<Item=Chapter<T>>,
+    U: IntoIterator<Item = Chapter<T>>,
 {
     fn build(book_name: T, content: U) -> Self;
 
@@ -83,16 +83,17 @@ pub struct StandardEpub {
 
 impl WriteBook<String, StandardContent> for StandardEpub {
     fn build(book_name: String, content: StandardContent) -> Self {
-        Self {
-            book_name,
-            content
-        }
+        Self { book_name, content }
     }
 
-    fn write(self, chapter_num: bool) -> Result<(), std::fmt::Error>{
+    fn write(self, chapter_num: bool) -> Result<(), std::fmt::Error> {
         let mut file = File::create(self.book_name.to_owned() + ".epub").unwrap();
         let mut ebook_builder = EpubBuilder::new(ZipLibrary::new().unwrap()).unwrap();
-        ebook_builder.metadata("author", "Sai").unwrap().metadata("title", &self.book_name).unwrap();
+        ebook_builder
+            .metadata("author", "Sai")
+            .unwrap()
+            .metadata("title", &self.book_name)
+            .unwrap();
         for (id, chapter) in self.content.into_iter().enumerate() {
             let Chapter { mut title, content } = chapter;
             if chapter_num {
@@ -100,9 +101,12 @@ impl WriteBook<String, StandardContent> for StandardEpub {
             }
             let content = content_to_xhtml(&title, &content);
             ebook_builder
-                .add_content(EpubContent::new(format!("{}.xhtml", id), content.as_bytes())
-                    .title(&title)
-                    .reftype(ReferenceType::TitlePage)).unwrap();
+                .add_content(
+                    EpubContent::new(format!("{}.xhtml", id), content.as_bytes())
+                        .title(&title)
+                        .reftype(ReferenceType::TitlePage),
+                )
+                .unwrap();
         }
         ebook_builder.inline_toc().generate(&mut file).unwrap();
         Ok(())
@@ -119,7 +123,7 @@ pub struct EBConfig<'a> {
 }
 
 pub struct IterDownloader {
-    config: IterationConfig
+    config: IterationConfig,
 }
 
 pub struct NumDownloader {
@@ -127,20 +131,26 @@ pub struct NumDownloader {
 }
 
 pub struct TocDownloader {
-    config: TocConfig
+    config: TocConfig,
 }
 
-pub async fn single_page_download(url: &str, headers: &Option<HeaderMap>, h2: bool, delay: Option<u64>, retry: Option<u8>) -> Html {
-    let response = send_wrapped_request(&url, headers, h2, delay, retry).await.unwrap();
+pub async fn single_page_download(
+    url: &str,
+    headers: &Option<HeaderMap>,
+    h2: bool,
+    delay: Option<u64>,
+    retry: Option<u8>,
+) -> Html {
+    let response = send_wrapped_request(&url, headers, h2, delay, retry)
+        .await
+        .unwrap();
     let raw_html = response.text().await.unwrap();
     dom::get_dom(&raw_html)
 }
 
 impl IterDownloader {
     pub fn build(config: IterationConfig) -> Self {
-        Self {
-            config
-        }
+        Self { config }
     }
 
     pub async fn download(self, cli_config: EBConfig<'_>) -> StandardContent {
@@ -148,11 +158,24 @@ impl IterDownloader {
         let mut url = self.config.base_url;
         let next_selector = self.config.next_selector;
         loop {
-            let document = single_page_download(&url, cli_config.headers, cli_config.h2, cli_config.delay, cli_config.retry).await;
-            let (page_content, next_url) = single_page_extract_with_next_url(&document, &cli_config.title_selector, &cli_config.content_selector, &next_selector).await;
+            let document = single_page_download(
+                &url,
+                cli_config.headers,
+                cli_config.h2,
+                cli_config.delay,
+                cli_config.retry,
+            )
+            .await;
+            let (page_content, next_url) = single_page_extract_with_next_url(
+                &document,
+                &cli_config.title_selector,
+                &cli_config.content_selector,
+                &next_selector,
+            )
+            .await;
             result.push(page_content);
             if url == self.config.stop_url {
-                break
+                break;
             }
             url = next_url.unwrap();
         }
@@ -162,17 +185,27 @@ impl IterDownloader {
 
 impl NumDownloader {
     pub fn build(config: NumConfig) -> Self {
-        Self {
-            config
-        }
+        Self { config }
     }
 
     pub async fn download(self, cli_config: EBConfig<'_>) -> StandardContent {
         let mut result = Vec::new();
         for number in self.config.start..=self.config.end {
             let url = self.config.pattern.replace("$", &number.to_string());
-            let document = single_page_download(&url, cli_config.headers, cli_config.h2, cli_config.delay, cli_config.retry).await;
-            let page_content = single_page_extract(&document, &cli_config.title_selector, &cli_config.content_selector).await;
+            let document = single_page_download(
+                &url,
+                cli_config.headers,
+                cli_config.h2,
+                cli_config.delay,
+                cli_config.retry,
+            )
+            .await;
+            let page_content = single_page_extract(
+                &document,
+                &cli_config.title_selector,
+                &cli_config.content_selector,
+            )
+            .await;
             result.push(page_content);
         }
         result
@@ -181,27 +214,48 @@ impl NumDownloader {
 
 impl TocDownloader {
     pub fn build(config: TocConfig) -> Self {
-        Self {
-            config
-        }
+        Self { config }
     }
 
     pub async fn download(self, cli_config: EBConfig<'_>) -> StandardContent {
         let mut result = Vec::new();
-        let links = self.extract_links(cli_config.headers, cli_config.h2).await.unwrap();
+        let links = self
+            .extract_links(cli_config.headers, cli_config.h2)
+            .await
+            .unwrap();
         for link in links {
-            let document = single_page_download(&link, cli_config.headers, cli_config.h2, cli_config.delay, cli_config.retry).await;
-            let page_content = single_page_extract(&document, &cli_config.title_selector, &cli_config.content_selector).await;
+            let document = single_page_download(
+                &link,
+                cli_config.headers,
+                cli_config.h2,
+                cli_config.delay,
+                cli_config.retry,
+            )
+            .await;
+            let page_content = single_page_extract(
+                &document,
+                &cli_config.title_selector,
+                &cli_config.content_selector,
+            )
+            .await;
             result.push(page_content);
         }
         result
     }
 
-    async fn extract_links(&self, headers: &Option<HeaderMap>, h2: bool) -> Result<Vec<String>, fmt::Error> {
-        let base_page_response = send_wrapped_request(&self.config.base_url, headers, h2, None, None).await?;
+    async fn extract_links(
+        &self,
+        headers: &Option<HeaderMap>,
+        h2: bool,
+    ) -> Result<Vec<String>, fmt::Error> {
+        let base_page_response =
+            send_wrapped_request(&self.config.base_url, headers, h2, None, None).await?;
         // In case of toc is a dedicate request
         let result = if self.config.toc_selector == "" {
-            let urls = dom::get_all_urls(&base_page_response.text().await.unwrap(), &self.config.void_sub);
+            let urls = dom::get_all_urls(
+                &base_page_response.text().await.unwrap(),
+                &self.config.void_sub,
+            );
             urls
         } else {
             // TODO: In case of toc is not a dedicate request
@@ -212,21 +266,33 @@ impl TocDownloader {
 }
 
 fn content_to_xhtml(title: &str, content: &str) -> String {
-    format!(r#"<?xml version="1.0" encoding="UTF-8"?>
+    format!(
+        r#"<?xml version="1.0" encoding="UTF-8"?>
     <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="https://www.w3.org/ns/epub/2007/ops/"><body>
-    <h1>{}</h1>{}</body></html>"#, title, content)
+    <h1>{}</h1>{}</body></html>"#,
+        title, content
+    )
 }
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
     use crate::{Chapter, StandardEpub, WriteBook};
+    use std::fs;
     #[test]
     fn write_standard_epub_ok() {
         let content = vec![
-            Chapter { title: "tt".to_string(), content: "ct".to_string() },
-            Chapter { title: "tt2".to_string(), content: "ct2".to_string() },
-            Chapter { title: "tt3".to_string(), content: "ct3".to_string() },
+            Chapter {
+                title: "tt".to_string(),
+                content: "ct".to_string(),
+            },
+            Chapter {
+                title: "tt2".to_string(),
+                content: "ct2".to_string(),
+            },
+            Chapter {
+                title: "tt3".to_string(),
+                content: "ct3".to_string(),
+            },
         ];
 
         let writer = StandardEpub::build("TestBook".to_string(), content);
